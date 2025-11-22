@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Writer Profile</title>
+    <script src="firebase-config.js"></script> 
+
+    <style>
+        :root {
+            --primary: #2563eb;
+            --secondary: #1e293b;
+            --paper: #f8fafc;
+            --accent: #fbbf24;
+            --border: #e2e8f0;
+        }
+
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--paper); color: var(--secondary); margin: 0; }
+
+        nav { background: white; padding: 1rem 2rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .logo { text-decoration: none; font-weight: bold; font-size: 1.2rem; color: var(--primary); }
+
+        .container {
+            max-width: 1000px; margin: 2rem auto; display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; padding: 0 1rem;
+        }
+
+        .profile-header {
+            background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex; align-items: center; gap: 1.5rem; margin-bottom: 2rem;
+        }
+
+        .avatar-large { width: 80px; height: 80px; background-color: #cbd5e1; border-radius: 50%; background-size: cover; }
+        .verified-badge { background-color: #dcfce7; color: #166534; font-size: 0.8rem; padding: 2px 8px; border-radius: 12px; margin-left: 8px; }
+
+        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 1rem; }
+        .gallery-item { height: 200px; background: white; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: transform 0.2s; }
+        .gallery-item:hover { transform: scale(1.02); }
+        
+        .mock-img { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: repeating-linear-gradient(white, white 24px, #e2e8f0 25px); text-align: center; padding: 10px; box-sizing: border-box; }
+
+        .pricing-card {
+            background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            position: sticky; top: 2rem; height: fit-content; border-top: 5px solid var(--primary);
+        }
+
+        .btn-hire-now { width: 100%; background: var(--secondary); color: white; padding: 1rem; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn-hire-now:hover { background: var(--primary); }
+
+        /* Lightbox */
+        .lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; justify-content: center; align-items: center; flex-direction: column; }
+        .lightbox-content { background: white; padding: 2rem; border-radius: 8px; max-width: 90%; }
+        .close-lightbox { color: white; font-size: 2rem; margin-bottom: 1rem; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <a href="index.html" class="logo">✍️ Handwritten Hub</a>
+        <a href="hire.html" style="text-decoration:none; color:#64748b;">⬅ Back to Search</a>
+    </nav>
+
+    <div class="container">
+        <div class="content-col">
+            <div class="profile-header">
+                <div class="avatar-large" id="profileAvatar"></div>
+                <div>
+                    <h1 style="margin:0;"><span id="profileName">Rahul S.</span> <span class="verified-badge">Verified</span></h1>
+                    <p style="margin: 5px 0; color: #64748b;"><span id="profileRole">Engineering</span> • 3rd Year • Delhi University</p>
+                    <p style="font-size: 0.9rem;">"I write in clean, legible text. I use Classmate notebooks and Blue Gel pen."</p>
+                </div>
+            </div>
+
+            <h3>✍️ Handwriting Samples</h3>
+            <div class="gallery-grid">
+                <div class="gallery-item" onclick="openLightbox('Sample 1')"><div class="mock-img">The quick brown fox...</div></div>
+                <div class="gallery-item" onclick="openLightbox('Sample 2')"><div class="mock-img">Physics Formulas...</div></div>
+            </div>
+        </div>
+
+        <div class="pricing-col">
+            <div class="pricing-card">
+                <div class="price-header" style="font-size: 2rem; font-weight: bold; color: var(--primary);">₹15 <span style="font-size: 0.9rem; color: #64748b;">/ page</span></div>
+                <p style="color: #166534; font-weight: bold; font-size: 0.9rem;">🟢 Available Now</p>
+                <ul style="list-style: none; padding: 0; margin: 1.5rem 0; font-size: 0.9rem;">
+                    <li style="padding: 0.5rem 0; border-bottom: 1px solid #f1f5f9; display:flex; justify-content:space-between;"><span>⚡ Delivery</span> <strong>2 Days</strong></li>
+                </ul>
+                <button class="btn-hire-now" onclick="startOrder()">Hire Now</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="lightbox" class="lightbox" onclick="closeLightbox()">
+        <div class="close-lightbox">&times;</div>
+        <div class="lightbox-content" onclick="event.stopPropagation()">
+            <h2>Sample View</h2>
+            <div style="height: 200px; background: repeating-linear-gradient(white, white 24px, #e2e8f0 25px); padding: 20px;">
+                <p style="font-family: cursive; font-size: 1.5rem;">This is a clear view of the handwriting sample.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="firebase-config.js"></script>
+<script>
+    window.onload = function() {
+        const params = new URLSearchParams(window.location.search);
+        const uid = params.get('uid');
+
+        if(uid) {
+            setTimeout(() => {
+                db.collection('users').doc(uid).get().then(doc => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        document.getElementById('profileName').innerText = data.name;
+                        document.getElementById('profileRole').innerText = data.role === 'writer' ? 'Writer' : 'User';
+                        document.getElementById('profileAvatar').style.backgroundImage = `url('${data.photoURL}')`;
+                        
+                        // Inject bio and sample
+                        document.querySelector('.content-col p').innerText = data.bio || "No bio provided.";
+                        
+                        // You can also dynamically update pricing here based on data.rate
+                    }
+                });
+            }, 1000);
+        }
+    }
+    
+    function startOrder() {
+        // Simple Order Creation Logic
+        const params = new URLSearchParams(window.location.search);
+        const writerId = params.get('uid');
+        const user = auth.currentUser;
+
+        if(!user) {
+            alert("Please login to hire.");
+            window.location.href = 'login.html';
+            return;
+        }
+
+        // Create an order in Firestore
+        db.collection('orders').add({
+            buyerId: user.uid,
+            writerId: writerId,
+            status: 'Pending',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            details: "New handwriting request"
+        }).then(() => {
+            alert("Request Sent! Check your Dashboard.");
+            window.location.href = 'dashboard.html';
+        });
+    }
+</script>
+</body>
+</html>

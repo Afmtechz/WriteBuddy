@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Handwritten Hub - Student Marketplace</title>
+    <script src="firebase-config.js"></script> 
+
+    <style>
+        :root {
+            --primary: #2563eb;
+            --secondary: #1e293b;
+            --paper: #f8fafc;
+            --accent: #fbbf24;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--paper);
+            color: var(--secondary);
+        }
+
+        /* Navigation */
+        nav {
+            background: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .nav-buttons { display: flex; gap: 10px; align-items: center; }
+
+        .nav-buttons button {
+            padding: 0.5rem 1rem;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            font-weight: 600;
+        }
+
+        .btn-login { background: none; color: var(--secondary); }
+        .btn-signup { background: var(--primary); color: white; }
+        .btn-logout { background: #fee2e2; color: #dc2626; display: none; }
+        .user-greeting { font-weight: bold; display: none; margin-right: 10px; }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 4rem 1rem;
+            background: linear-gradient(135deg, #eff6ff 0%, #fff 100%);
+        }
+
+        .hero h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .highlight {
+            background-color: var(--accent);
+            padding: 0 5px;
+        }
+
+        .cta-container {
+            margin-top: 2rem;
+        }
+
+        .btn-main {
+            padding: 1rem 2rem;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: transform 0.2s;
+        }
+
+        .btn-hire { background-color: var(--secondary); color: white; }
+        .btn-work { background-color: white; border: 2px solid var(--secondary); color: var(--secondary); }
+        
+        .btn-main:hover { transform: scale(1.05); }
+
+        /* Section Styles */
+        .section-title { text-align: center; margin-top: 3rem; }
+        
+        .profile-grid {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            width: 300px;
+            padding: 1rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; }
+        .avatar { width: 50px; height: 50px; background: #ccc; border-radius: 50%; background-size: cover; flex-shrink: 0; }
+        .sample-img { 
+            width: 100%; 
+            height: 150px; 
+            background-color: #e2e8f0; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            color: #64748b;
+            margin-bottom: 1rem;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .price-tag { font-weight: bold; color: var(--primary); margin-left: auto; }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <a href="index.html" class="logo">✍️ Handwritten Hub</a>
+        <div class="nav-buttons">
+            <span id="userGreeting" class="user-greeting"></span>
+            <button id="btnLogin" class="btn-login" onclick="window.location.href='login.html'">Log In</button>
+            <button id="btnSignup" class="btn-signup" onclick="window.location.href='login.html'">Sign Up</button>
+            <button id="btnLogout" class="btn-logout" onclick="logout()">Log Out</button>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <h1>Too busy to write? <br> We <span class="highlight">ink it</span> for you.</h1>
+        <p>The marketplace for handwritten assignments, diagrams, and lab records.</p>
+        
+        <div class="cta-container">
+            <button class="btn-main btn-hire" onclick="window.location.href='hire.html'">👨‍🎓 Hire Someone</button>
+            <button class="btn-main btn-work" onclick="window.location.href='earn.html'">✍️ Earn Money</button>
+        </div>
+    </section>
+
+    <h2 class="section-title">Featured Writers</h2>
+    
+    <div class="profile-grid" id="featuredWritersList">
+        <p style="color: #64748b;">Loading active writers...</p>
+    </div>
+
+    <div style="text-align: center; margin-bottom: 4rem;">
+        <a href="hire.html" style="color: var(--primary); text-decoration: none; font-weight: bold;">View All Writers &rarr;</a>
+    </div>
+
+    <script>
+        // --- Auth Logic ---
+        function checkAuth() {
+            const user = localStorage.getItem('currentUser');
+            const loginBtn = document.getElementById('btnLogin');
+            const signupBtn = document.getElementById('btnSignup');
+            const logoutBtn = document.getElementById('btnLogout');
+            const greeting = document.getElementById('userGreeting');
+
+            if (user) {
+                // User is logged in
+                const userData = JSON.parse(user);
+                loginBtn.style.display = 'none';
+                signupBtn.style.display = 'none';
+                
+                greeting.style.display = 'block';
+                greeting.innerText = `Hi, ${userData.name}`;
+                
+                logoutBtn.style.display = 'block';
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('currentUser');
+            auth.signOut().then(() => {
+                window.location.reload();
+            });
+        }
+
+        // --- Fetch Writers Logic ---
+        function loadFeaturedWriters() {
+            const container = document.getElementById('featuredWritersList');
+
+            // Wait slightly for Firebase to init
+            setTimeout(() => {
+                db.collection('users')
+                  .where('role', '==', 'writer')
+                  .limit(3) // Only show top 3 on homepage
+                  .get()
+                  .then((querySnapshot) => {
+                      if (querySnapshot.empty) {
+                          container.innerHTML = "<p>No writers active at the moment. Be the first!</p>";
+                          return;
+                      }
+
+                      container.innerHTML = ""; // Clear loading text
+
+                      querySnapshot.forEach((doc) => {
+                          const writer = doc.data();
+                          
+                          // Handle missing or partial data
+                          const price = writer.rate ? `₹${writer.rate.replace(/\D/g, '')}/pg` : '₹10/pg';
+                          const imgUrl = writer.sampleImage ? `url('${writer.sampleImage}')` : '';
+                          const sampleText = writer.sampleImage ? '' : 'No Preview';
+                          
+                          const card = `
+                            <div class="card">
+                                <div class="card-header">
+                                    <div class="avatar" style="background-image: url('${writer.photoURL}')"></div>
+                                    <div>
+                                        <strong>${writer.name}</strong><br>
+                                        <small>${writer.college || 'Student'}</small>
+                                    </div>
+                                    <span class="price-tag">${price}</span>
+                                </div>
+                                <div class="sample-img" style="background-image: ${imgUrl}">
+                                    ${sampleText}
+                                </div>
+                                <p style="flex-grow: 1; font-size: 0.9rem;">
+                                    ${writer.bio ? writer.bio.substring(0, 60) + '...' : 'Available for writing assignments.'}
+                                </p>
+                                <button class="btn-main btn-hire" style="width:100%; font-size: 1rem;" onclick="window.location.href='profile.html?uid=${writer.uid}'">View Profile</button>
+                            </div>
+                          `;
+                          container.innerHTML += card;
+                      });
+                  })
+                  .catch((error) => {
+                      console.error("Error loading writers:", error);
+                      container.innerHTML = "<p>Could not load writers. Please try again later.</p>";
+                  });
+            }, 1000); // 1s delay to ensure global 'db' is ready
+        }
+
+        // Run on load
+        window.onload = function() {
+            checkAuth();
+            loadFeaturedWriters();
+        };
+    </script>
+
+</body>
+</html>

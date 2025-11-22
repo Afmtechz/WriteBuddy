@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Become a Writer - Earn Money</title>
+    <script src="firebase-config.js"></script> 
+    <style>
+        :root { --brand: #16a34a; --dark: #0f172a; --light: #f0fdf4; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        .left-panel { flex: 1; background: var(--dark); color: white; padding: 3rem; display: flex; flex-direction: column; justify-content: center; }
+        h1 { font-size: 3rem; margin-bottom: 1rem; line-height: 1.2; }
+        .highlight { color: var(--brand); }
+        .benefit-list { margin-top: 2rem; }
+        .benefit { margin-bottom: 1.5rem; display: flex; align-items: center; gap: 15px; font-size: 1.1rem; }
+        .icon-circle { width: 40px; height: 40px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .right-panel { flex: 1; background: white; padding: 3rem; overflow-y: auto; display: flex; align-items: center; justify-content: center; }
+        .form-container { width: 100%; max-width: 450px; }
+        .input-group { margin-bottom: 1.2rem; }
+        label { display: block; font-weight: 600; margin-bottom: 5px; color: #334155; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
+        .file-upload { border: 2px dashed #cbd5e1; padding: 2rem; text-align: center; border-radius: 8px; cursor: pointer; background: var(--light); color: #64748b; transition: all 0.3s ease; }
+        .file-upload:hover { border-color: var(--brand); background-color: #ecfdf5; }
+        .btn-submit { width: 100%; padding: 1rem; background: var(--brand); color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 1rem; }
+        .btn-submit:hover { background: #15803d; }
+        @media (max-width: 768px) { body { flex-direction: column; overflow: auto; } .left-panel { padding: 2rem; } .right-panel { padding: 2rem; } }
+    </style>
+</head>
+<body>
+
+    <div class="left-panel">
+        <a href="index.html" style="color:white; text-decoration:none; margin-bottom: 2rem;">⬅ Back Home</a>
+        <h1>Turn your <br><span class="highlight">Neat Notes</span><br> into Cash.</h1>
+        <p>Join 500+ students earning money in their free time.</p>
+
+        <div class="benefit-list">
+            <div class="benefit"><div class="icon-circle">💰</div><div>Earn ₹10-₹30 per page</div></div>
+            <div class="benefit"><div class="icon-circle">🕒</div><div>Work whenever you are free</div></div>
+            <div class="benefit"><div class="icon-circle">🔒</div><div>Guaranteed Payment (Escrow)</div></div>
+        </div>
+    </div>
+
+    <div class="right-panel">
+        <div class="form-container">
+            <h2 style="margin-top:0;">Create Writer Profile</h2>
+            
+            <form onsubmit="event.preventDefault(); registerUser();">
+                <div class="input-group">
+                    <label>Full Name</label>
+                    <input type="text" id="writerName" placeholder="e.g. Anjali Gupta" required>
+                </div>
+
+                <div class="input-group">
+                    <label>College / University</label>
+                    <input type="text" id="writerCollege" placeholder="e.g. IIT Bombay" required>
+                </div>
+
+                <div class="input-group">
+                    <label>Your Rate (per page)</label>
+                    <select id="writerRate">
+                        <option value="10">₹10 (Standard)</option>
+                        <option value="15">₹15 (Experienced)</option>
+                        <option value="25">₹25 (Premium / Diagrams)</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label>Handwriting Sample</label>
+                    <input type="file" id="fileInput" accept="image/png, image/jpeg, image/jpg" style="display: none;" onchange="handleFileSelect(this)">
+                    
+                    <div class="file-upload" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                        <span id="uploadText">📂 Click to upload photo of your writing</span>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Bio / Skills</label>
+                    <textarea id="writerBio" rows="3" placeholder="I have neat cursive writing. Good at biology diagrams..."></textarea>
+                </div>
+
+                <button class="btn-submit">Start Earning</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    function handleFileSelect(input) {
+        if(input.files.length > 0) {
+            document.getElementById('uploadText').innerText = "✅ " + input.files[0].name;
+            document.getElementById('dropZone').style.borderColor = "#16a34a";
+        }
+    }
+
+    function registerUser() {
+        const user = auth.currentUser;
+        if (!user) {
+            alert("🔒 Please Log In first to become a writer.");
+            window.location.href = 'login.html';
+            return;
+        }
+
+        const fileInput = document.getElementById('fileInput');
+        const bio = document.getElementById('writerBio').value;
+        const rate = document.getElementById('writerRate').value;
+        const college = document.getElementById('writerCollege').value;
+
+        if(fileInput.files.length === 0) {
+            alert("⚠️ Please upload a sample!");
+            return;
+        }
+
+        const btn = document.querySelector('.btn-submit');
+        btn.innerHTML = "Uploading & Saving...";
+
+        // 1. Upload Image to Firebase Storage
+        const file = fileInput.files[0];
+        const storageRef = storage.ref('samples/' + user.uid + '-' + file.name);
+        
+        storageRef.put(file).then((snapshot) => {
+            return snapshot.ref.getDownloadURL();
+        }).then((downloadURL) => {
+            
+            // 2. Update User Profile in Firestore
+            return db.collection('users').doc(user.uid).update({
+                role: 'writer',
+                college: college,
+                bio: bio,
+                rate: rate, 
+                sampleImage: downloadURL,
+                isVerified: false 
+            });
+        }).then(() => {
+            alert("✅ Profile Submitted! You are now listed.");
+            window.location.href = 'dashboard.html';
+        }).catch((error) => {
+            console.error(error);
+            alert("Error: " + error.message);
+            btn.innerHTML = "Try Again";
+        });
+    }
+
+    window.onload = () => {
+        setTimeout(() => {
+            auth.onAuthStateChanged(user => {
+                if(user) {
+                    document.getElementById('writerName').value = user.displayName || "";
+                }
+            });
+        }, 1000);
+    }
+</script>
+</body>
+</html>
