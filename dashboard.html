@@ -106,6 +106,40 @@
         .btn-reject:hover { background: #fecaca; }
         .btn-cancel { background: #e2e8f0; color: #475569; }
         .btn-cancel:hover { background: #cbd5e1; }
+        /* --- Chat Modal Styles --- */
+.modal {
+    display: none; position: fixed; z-index: 100; left: 0; top: 0;
+    width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);
+    justify-content: center; align-items: center;
+}
+.modal-content {
+    background-color: white; padding: 20px; border-radius: 10px;
+    width: 90%; max-width: 500px; height: 80vh; display: flex; flex-direction: column;
+}
+.chat-header {
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 10px;
+}
+.chat-box {
+    flex: 1; overflow-y: auto; padding: 10px; background: #f8fafc;
+    border: 1px solid #e2e8f0; border-radius: 5px; margin-bottom: 10px;
+    display: flex; flex-direction: column; gap: 8px;
+}
+.message-bubble {
+    max-width: 75%; padding: 8px 12px; border-radius: 15px; font-size: 0.9rem; line-height: 1.4;
+}
+.msg-sent {
+    background: #2563eb; color: white; align-self: flex-end;
+    border-bottom-right-radius: 2px;
+}
+.msg-received {
+    background: #e2e8f0; color: #1e293b; align-self: flex-start;
+    border-bottom-left-radius: 2px;
+}
+.chat-input-area { display: flex; gap: 10px; }
+.chat-input-area input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 5px; }
+.btn-send { background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+.close-chat { font-size: 1.5rem; cursor: pointer; color: #64748b; }
     </style>
 </head>
 <body>
@@ -184,6 +218,23 @@
             </div>
         </div>
     </div>
+
+    <div id="chatModal" class="modal">
+    <div class="modal-content">
+        <div class="chat-header">
+            <h3 style="margin:0;">💬 Order Chat</h3>
+            <span class="close-chat" onclick="closeChat()">&times;</span>
+        </div>
+        
+        <div id="chatBox" class="chat-box">
+            </div>
+
+        <div class="chat-input-area">
+            <input type="text" id="msgInput" placeholder="Type instructions or ask questions..." onkeypress="handleEnter(event)">
+            <button class="btn-send" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+</div>
 
     <script>
         let currentUser = null;
@@ -378,7 +429,25 @@
                 });
                 list.innerHTML = html;
             });
-        }
+            // ... existing code ...
+    const actionBtn = order.status === 'Pending' ? 
+        `<button class="btn-action btn-cancel" onclick="updateStatus('${doc.id}', 'Cancelled')">Cancel</button>` : '';
+    
+    // NEW: Add Chat Button
+    const chatBtn = `<button class="btn-action" style="background:#3b82f6; color:white; margin-left:5px;" onclick="openChat('${doc.id}')">💬 Chat</button>`;
+    
+    html += `<div class="order-card">
+                <div class="order-info">
+                    <div style="margin-bottom:5px;">
+                        <span class="badge badge-${order.status.toLowerCase()}">${order.status}</span>
+                        <small style="margin-left:10px;">${date}</small>
+                    </div>
+                    <strong>${order.details}</strong>
+                </div>
+                <div class="order-actions">${actionBtn} ${chatBtn}</div>
+             </div>`;
+    // ... existing code ...
+            }
 
         function loadIncomingJobs(uid) {
             db.collection('orders').where('writerId', '==', uid).orderBy('createdAt', 'desc').get().then(snaps => {
@@ -395,14 +464,98 @@
                 });
                 list.innerHTML = html;
             });
-        }
+            // ... existing code ...
+            let btns = '';
+            if(order.status === 'Pending') btns = `...`; // (Keep your existing buttons)
+            else if(order.status === 'Accepted') btns = `...`;
+            
+            // NEW: Add Chat Button
+            const chatBtn = `<button class="btn-action" style="background:#3b82f6; color:white; margin-left:5px;" onclick="openChat('${doc.id}')">💬 Chat</button>`;
+            
+            html += `<div class="order-card">
+                        <div class="order-info">...</div>
+                        <div class="order-actions">${btns} ${chatBtn}</div>
+                     </div>`;
+            // ... existing code ...
+                    }
 
         function updateStatus(id, status) {
             if(confirm(`Set order to ${status}?`)) {
                 db.collection('orders').doc(id).update({status: status}).then(() => loadDashboardData(currentUser.uid));
             }
         }
+
+        let currentChatId = null;
+let unsubscribeChat = null; // To stop listening when chat closes
+
+function openChat(orderId) {
+    currentChatId = orderId;
+    document.getElementById('chatModal').style.display = 'flex';
+    document.getElementById('chatBox').innerHTML = '<p style="text-align:center; color:#94a3b8;">Loading messages...</p>';
+    
+    // Listen to sub-collection 'messages' in real-time
+    unsubscribeChat = db.collection('orders').doc(orderId).collection('messages')
+        .orderBy('createdAt', 'asc')
+        .onSnapshot(snapshot => {
+            const chatBox = document.getElementById('chatBox');
+            chatBox.innerHTML = ''; // Clear loading text
+            
+            if(snapshot.empty) {
+                chatBox.innerHTML = '<p style="text-align:center; color:#94a3b8; margin-top:20px;">No messages yet. Start the conversation!</p>';
+                return;
+            }
+
+            snapshot.forEach(doc => {
+                const msg = doc.data();
+                const div = document.createElement('div');
+                // Check if I sent this message
+                const isMe = msg.senderId === currentUser.uid;
+                
+                div.className = `message-bubble ${isMe ? 'msg-sent' : 'msg-received'}`;
+                div.innerText = msg.text;
+                chatBox.appendChild(div);
+            });
+            
+            // Auto-scroll to bottom
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+}
+
+function closeChat() {
+    document.getElementById('chatModal').style.display = 'none';
+    if(unsubscribeChat) unsubscribeChat(); // Stop listening to save data
+    currentChatId = null;
+}
+
+function sendMessage() {
+    const input = document.getElementById('msgInput');
+    const text = input.value.trim();
+    
+    if(!text || !currentChatId) return;
+    
+    input.value = ''; // Clear input immediately
+    
+    db.collection('orders').doc(currentChatId).collection('messages').add({
+        text: text,
+        senderId: currentUser.uid,
+        senderName: currentUser.displayName || 'User',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(err => console.error("Error sending:", err));
+}
+
+function handleEnter(e) {
+    if(e.key === 'Enter') sendMessage();
+}
+
+// Close modal if clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('chatModal');
+    if (event.target == modal) {
+        closeChat();
+    }
+}
     </script>
 </body>
 </html>
+
 
