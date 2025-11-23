@@ -431,8 +431,9 @@
             const actionBtn = order.status === 'Pending' ? 
                 `<button class="btn-action btn-cancel" onclick="updateStatus('${doc.id}', 'Cancelled')">Cancel</button>` : '';
             
-            // Chat Button
-            const chatBtn = `<button class="btn-action" style="background:#3b82f6; color:white; margin-left:5px;" onclick="openChat('${doc.id}')">💬 Chat</button>`;
+            // FIX: Hide Chat if Rejected
+            const chatBtn = order.status === 'Rejected' ? '' : 
+                `<button class="btn-action" style="background:#3b82f6; color:white; margin-left:5px;" onclick="openChat('${doc.id}')">💬 Chat</button>`;
             
             html += `<div class="order-card">
                         <div class="order-info">
@@ -469,8 +470,9 @@
                 btns = `<button class="btn-action btn-accept" onclick="updateStatus('${doc.id}', 'Completed')">Mark Done</button>`;
             }
             
-            // Chat Button
-            const chatBtn = `<button class="btn-action" style="background:#3b82f6; color:white; margin-left:5px;" onclick="openChat('${doc.id}')">💬 Chat</button>`;
+            // FIX: Hide Chat if Rejected
+            const chatBtn = order.status === 'Rejected' ? '' : 
+                `<button class="btn-action" style="background:#3b82f6; color:white; margin-left:5px;" onclick="openChat('${doc.id}')">💬 Chat</button>`;
 
             html += `<div class="order-card">
                         <div class="order-info">
@@ -564,6 +566,7 @@ window.onclick = function(event) {
     </script>
 </body>
 </html>
+
 
 
 
