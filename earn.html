@@ -107,7 +107,7 @@
     <script>
     function handleFileSelect(input) {
         if(input.files.length > 0) {
-            document.getElementById('uploadText').innerText = "✅ " + input.files[0].name;
+            document.getElementById('uploadText').innerText = `✅ ${input.files.length} files selected`;
             document.getElementById('dropZone').style.borderColor = "#16a34a";
         }
     }
@@ -126,29 +126,31 @@
         const college = document.getElementById('writerCollege').value;
 
         if(fileInput.files.length === 0) {
-            alert("⚠️ Please upload a sample!");
+            alert("⚠️ Please upload at least one sample!");
             return;
         }
 
         const btn = document.querySelector('.btn-submit');
         btn.innerHTML = "Uploading & Saving...";
+        btn.disabled = true;
 
-        // 1. Upload Image to Firebase Storage
-        const file = fileInput.files[0];
-        const storageRef = storage.ref('samples/' + user.uid + '-' + file.name);
-        
-        storageRef.put(file).then((snapshot) => {
-            return snapshot.ref.getDownloadURL();
-        }).then((downloadURL) => {
-            
+        // --- FIXED: Multiple File Upload Logic ---
+        const uploadPromises = Array.from(fileInput.files).map(file => {
+            // Use Date.now() to prevent overwriting files with same name
+            const storageRef = storage.ref('samples/' + user.uid + '-' + Date.now() + '-' + file.name);
+            return storageRef.put(file).then(snapshot => snapshot.ref.getDownloadURL());
+        });
+
+        Promise.all(uploadPromises).then((urls) => {
             // 2. Update User Profile in Firestore
             return db.collection('users').doc(user.uid).update({
                 role: 'writer',
                 college: college,
                 bio: bio,
-                rate: rate, 
-                sampleImage: downloadURL,
-                isVerified: false 
+                rate: rate,
+                sampleImages: urls,       // Save array of all images
+                sampleImage: urls[0],     // Save first image as string (for backward compatibility)
+                isVerified: false
             });
         }).then(() => {
             alert("✅ Profile Submitted! You are now listed.");
@@ -157,19 +159,25 @@
             console.error(error);
             alert("Error: " + error.message);
             btn.innerHTML = "Try Again";
+            btn.disabled = false;
         });
     }
 
+    // Initialize Auth Listener
     window.onload = () => {
+        // Wait a moment for firebase-config to load
         setTimeout(() => {
-            auth.onAuthStateChanged(user => {
-                if(user) {
-                    document.getElementById('writerName').value = user.displayName || "";
-                }
-            });
+            if(window.auth) {
+                auth.onAuthStateChanged(user => {
+                    if(user) {
+                        document.getElementById('writerName').value = user.displayName || "";
+                    }
+                });
+            }
         }, 1000);
     }
 </script>
 </body>
 
 </html>
+
