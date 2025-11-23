@@ -298,19 +298,17 @@
                 saveToFirestore(updateData);
             }
         }
-
-        function saveToFirestore(data) {
-            db.collection('users').doc(currentUser.uid).update(data).then(() => {
-                alert("✅ Profile Updated Successfully!");
-                resetBtn();
-                // Refresh Form Data to show new images immediately
-                loadDashboardData(currentUser.uid); 
-            }).catch(err => {
-                alert("Error: " + err.message);
-                resetBtn();
-            });
-        }
-
+            
+                   function saveToFirestore(data) {
+                db.collection('users').doc(currentUser.uid).update(data).then(() => {
+                    alert("✅ Profile Updated Successfully!");
+                    // Force reload to ensure fresh data from DB and clear file inputs
+                    window.location.reload(); 
+                }).catch(err => {
+                    alert("Error: " + err.message);
+                    resetBtn();
+                });
+            }
         function resetBtn() {
             const btn = document.getElementById('saveBtn');
             btn.innerText = "Save Changes";
@@ -358,5 +356,6 @@
     </script>
 </body>
 </html>
+
 
 
