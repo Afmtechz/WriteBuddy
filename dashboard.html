@@ -161,6 +161,7 @@
 
     <script>
         let currentUser = null;
+        let currentProfileData = {};
 
         window.onload = () => {
             setTimeout(() => {
@@ -187,19 +188,21 @@
         }
 
         function loadDashboardData(uid) {
-            db.collection('users').doc(uid).get().then(doc => {
-                if (doc.exists) {
-                    const data = doc.data();
-                    if (data.role === 'writer') {
-                        document.getElementById('profileTabBtn').style.display = 'inline-block';
-                        document.getElementById('writerSection').classList.remove('hidden');
-                        loadIncomingJobs(uid); 
-                        populateProfileForm(data); 
-                    }
+        db.collection('users').doc(uid).get().then(doc => {
+            if (doc.exists) {
+                const data = doc.data();
+                if (data.role === 'writer') {
+                    currentProfileData = data; // <--- SAVE DATA HERE
+                    
+                    document.getElementById('profileTabBtn').style.display = 'inline-block';
+                    document.getElementById('writerSection').classList.remove('hidden');
+                    loadIncomingJobs(uid); 
+                    populateProfileForm(data); 
                 }
-                loadOutgoingRequests(uid); 
-            });
-        }
+            }
+            loadOutgoingRequests(uid); 
+        });
+    }
 
         function populateProfileForm(data) {
             document.getElementById('editName').value = data.name || '';
@@ -235,15 +238,24 @@
             const btn = document.getElementById('saveBtn');
             const fileInput = document.getElementById('editSampleInput');
             const files = fileInput.files;
-
-            // 1. Validation
+        
+            // 1. Get Existing Images safely
+            let existingImages = [];
+            if (currentProfileData.sampleImages && Array.isArray(currentProfileData.sampleImages)) {
+                existingImages = currentProfileData.sampleImages;
+            } else if (currentProfileData.sampleImage) {
+                existingImages = [currentProfileData.sampleImage];
+            }
+        
+            // 2. Validation
             if (files.length > 0) {
-                if (files.length > 2) {
-                    alert("⚠️ You can only upload a maximum of 2 images.");
+                // Check Total Limit (Existing count + New count)
+                if (existingImages.length + files.length > 2) {
+                    alert(`⚠️ Limit Reached! You have ${existingImages.length} images. You can only add ${2 - existingImages.length} more.`);
                     return;
                 }
                 
-                // Check Size (1MB = 1048576 bytes)
+                // Check Size
                 for(let i=0; i<files.length; i++) {
                     if(files[i].size > 1048576) {
                         alert(`⚠️ File "${files[i].name}" is too large! Max size is 1MB.`);
@@ -251,28 +263,31 @@
                     }
                 }
             }
-
+        
             btn.innerText = "Uploading & Saving...";
             btn.disabled = true;
-
+        
             const updateData = {
                 name: document.getElementById('editName').value,
                 college: document.getElementById('editCollege').value,
                 rate: document.getElementById('editRate').value,
                 bio: document.getElementById('editBio').value
             };
-
-            // 2. Upload Logic
+        
+            // 3. Upload & Merge Logic
             if (files.length > 0) {
                 const uploadPromises = Array.from(files).map(file => {
-                    // Use Date.now() to ensure unique filenames
                     const ref = storage.ref('samples/' + currentUser.uid + '-' + Date.now() + '-' + file.name);
                     return ref.put(file).then(snap => snap.ref.getDownloadURL());
                 });
-
-                Promise.all(uploadPromises).then(urls => {
-                    updateData.sampleImages = urls; // Save as Array
-                    updateData.sampleImage = urls[0]; // Save first image as string (Backup for Home/Hire pages)
+        
+                Promise.all(uploadPromises).then(newUrls => {
+                    // MERGE: Combine Existing images with New URLs
+                    const finalImages = existingImages.concat(newUrls);
+                    
+                    updateData.sampleImages = finalImages; 
+                    updateData.sampleImage = finalImages[0]; // Update main image
+                    
                     return saveToFirestore(updateData);
                 }).catch(err => {
                     alert("Upload Failed: " + err.message);
@@ -343,3 +358,4 @@
     </script>
 </body>
 </html>
+
