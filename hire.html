@@ -53,6 +53,33 @@
             width: 100%; padding: 0.5rem; margin-top: 10px; background: var(--text); color: white; border: none; border-radius: 5px; cursor: pointer;
         }
         .btn-view:hover { background: var(--primary); }
+        /* --- RESPONSIVE UPDATE FOR HIRE.HTML --- */
+@media (max-width: 768px) {
+    /* Change Grid to Single Column */
+    .container {
+        grid-template-columns: 1fr;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Filters Section - Make it collapsible or top-aligned */
+    .filters {
+        width: auto;
+        margin-bottom: 20px;
+    }
+    
+    /* Header Adjustments */
+    .results-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    /* Writer Cards */
+    .grid {
+        grid-template-columns: 1fr; /* Full width cards on mobile */
+    }
+}
     </style>
 </head>
 <body>
@@ -196,4 +223,5 @@
         }
     </script>
 </body>
+
 </html>
