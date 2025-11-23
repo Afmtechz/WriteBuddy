@@ -51,6 +51,35 @@
         .lightbox-content { background: white; padding: 1rem; border-radius: 8px; max-width: 90%; max-height: 90%; overflow: auto; }
         .close-lightbox { color: white; font-size: 2rem; margin-bottom: 1rem; cursor: pointer; }
         #lightboxImg { max-width: 100%; max-height: 80vh; }
+        /* --- RESPONSIVE UPDATE FOR PROFILE.HTML --- */
+@media (max-width: 768px) {
+    /* Stack Columns */
+    .container {
+        grid-template-columns: 1fr;
+        display: flex;
+        flex-direction: column-reverse; /* Put Pricing CARD on TOP or Bottom? usually bottom is better for info, top for CTA. Let's keep normal order but stacked. */
+        flex-direction: column;
+    }
+
+    /* Stack Header Info */
+    .profile-header {
+        flex-direction: column;
+        text-align: center;
+    }
+    .verified-badge { display: inline-block; margin-top: 5px; }
+
+    /* Adjust Pricing Card */
+    .pricing-card {
+        position: relative; /* Remove sticky on mobile */
+        top: 0;
+        margin-bottom: 2rem;
+        border-top: none;
+        border-bottom: 5px solid var(--primary); /* Visual cue */
+    }
+    
+    /* Navigation */
+    nav { padding: 1rem; flex-direction: column; gap: 10px; }
+}
     </style>
 </head>
 <body>
@@ -179,3 +208,4 @@
 </script>
 </body>
 </html>
+
