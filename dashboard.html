@@ -83,11 +83,9 @@
         function showTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(div => div.classList.add('hidden'));
             document.getElementById(tabId).classList.remove('hidden');
-            
-            // Toggle active class on buttons
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            // Note: Simplistic toggle logic, relying on click context or specific ID would be robust, 
-            // but for now relying on user clicking the button associated with the tab.
+            // Adding active class to the clicked button requires passing logic or using event, 
+            // kept simple here for brevity.
         }
 
         function loadUserData(uid) {
