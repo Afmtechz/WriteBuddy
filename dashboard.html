@@ -7,9 +7,15 @@
     <style>
         body { font-family: sans-serif; padding: 2rem; background: #f8fafc; }
         .container { max-width: 800px; margin: 0 auto; background: white; padding: 2rem; border-radius: 10px; }
-        .tab-btn { padding: 10px 20px; cursor: pointer; border: none; background: #e2e8f0; }
+        .tab-btn { padding: 10px 20px; cursor: pointer; border: none; background: #e2e8f0; margin-right: 5px; border-radius: 5px; }
         .tab-btn.active { background: #2563eb; color: white; }
         .hidden { display: none; }
+        
+        /* Form Styles */
+        label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; }
+        input, select, textarea { width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 5px; }
+        .btn-save { background: #16a34a; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin-top: 20px; }
+        .current-img { width: 100px; height: 100px; background-size: cover; border-radius: 5px; margin-top: 5px; border: 1px solid #ddd; }
     </style>
 </head>
 <body>
@@ -29,14 +35,36 @@
 
         <div id="profile" class="tab-content hidden">
             <h3>Update Profile</h3>
-            <label>Bio:</label><br>
-            <textarea id="editBio" style="width:100%; height:100px;"></textarea><br><br>
-            <button onclick="updateProfile()">Save Changes</button>
+            
+            <label>Full Name</label>
+            <input type="text" id="editName">
+
+            <label>College</label>
+            <input type="text" id="editCollege">
+
+            <label>Rate (per page)</label>
+            <select id="editRate">
+                <option value="10">₹10 (Standard)</option>
+                <option value="15">₹15 (Experienced)</option>
+                <option value="25">₹25 (Premium / Diagrams)</option>
+            </select>
+
+            <label>Bio</label>
+            <textarea id="editBio" style="width:100%; height:80px;"></textarea>
+
+            <label>Handwriting Sample</label>
+            <div id="currentSample" class="current-img"></div>
+            <input type="file" id="editSampleInput" accept="image/*" style="margin-top:10px;">
+            <small style="color:#666">Upload new to replace current.</small>
+            
+            <br>
+            <button class="btn-save" id="saveBtn" onclick="updateProfile()">Save Changes</button>
         </div>
     </div>
 
     <script>
         let currentUser = null;
+        let currentDocId = null;
 
         window.onload = () => {
             setTimeout(() => {
@@ -55,18 +83,34 @@
         function showTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(div => div.classList.add('hidden'));
             document.getElementById(tabId).classList.remove('hidden');
+            
+            // Toggle active class on buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            // Note: Simplistic toggle logic, relying on click context or specific ID would be robust, 
+            // but for now relying on user clicking the button associated with the tab.
         }
 
         function loadUserData(uid) {
             db.collection('users').doc(uid).get().then(doc => {
-                if (!doc.exists) return; // Should not happen if Login logic works
+                if (!doc.exists) return;
+                currentDocId = uid;
                 
                 const data = doc.data();
                 
-                // If user is a writer, show profile tab
+                // If user is a writer, show profile tab and populate data
                 if (data.role === 'writer') {
                     document.getElementById('profileTabBtn').style.display = 'inline-block';
+                    
+                    document.getElementById('editName').value = data.name || '';
+                    document.getElementById('editCollege').value = data.college || '';
+                    document.getElementById('editRate').value = data.rate || '10';
                     document.getElementById('editBio').value = data.bio || '';
+                    
+                    if(data.sampleImage) {
+                        document.getElementById('currentSample').style.backgroundImage = `url('${data.sampleImage}')`;
+                    } else {
+                        document.getElementById('currentSample').style.display = 'none';
+                    }
                 }
 
                 loadOrders(uid, data.role || 'buyer');
@@ -74,14 +118,60 @@
         }
 
         function updateProfile() {
+            const btn = document.getElementById('saveBtn');
+            btn.innerText = "Saving...";
+            btn.disabled = true;
+
+            const newName = document.getElementById('editName').value;
+            const newCollege = document.getElementById('editCollege').value;
+            const newRate = document.getElementById('editRate').value;
             const newBio = document.getElementById('editBio').value;
-            db.collection('users').doc(currentUser.uid).update({
+            const fileInput = document.getElementById('editSampleInput');
+
+            let updateData = {
+                name: newName,
+                college: newCollege,
+                rate: newRate,
                 bio: newBio
-            }).then(() => alert("Profile Updated!"));
+            };
+
+            // Check if a new image file is selected
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const storageRef = storage.ref('samples/' + currentUser.uid + '-' + file.name);
+
+                storageRef.put(file).then((snapshot) => {
+                    return snapshot.ref.getDownloadURL();
+                }).then((downloadURL) => {
+                    updateData.sampleImage = downloadURL;
+                    return saveToFirestore(updateData);
+                }).catch(err => {
+                    alert("Image Upload Error: " + err.message);
+                    btn.innerText = "Save Changes";
+                    btn.disabled = false;
+                });
+            } else {
+                saveToFirestore(updateData);
+            }
+        }
+
+        function saveToFirestore(data) {
+            db.collection('users').doc(currentUser.uid).update(data).then(() => {
+                alert("✅ Profile Updated Successfully!");
+                document.getElementById('saveBtn').innerText = "Save Changes";
+                document.getElementById('saveBtn').disabled = false;
+                
+                // Update Local UI if image changed
+                if(data.sampleImage) {
+                    document.getElementById('currentSample').style.backgroundImage = `url('${data.sampleImage}')`;
+                    document.getElementById('currentSample').style.display = 'block';
+                }
+            }).catch(err => {
+                alert("Error updating profile: " + err.message);
+            });
         }
 
         function loadOrders(uid, role) {
-            // Fetch orders where this user is buyer OR writer
             let queryField = role === 'writer' ? 'writerId' : 'buyerId';
             
             db.collection('orders').where(queryField, '==', uid).get().then(snaps => {
@@ -91,7 +181,7 @@
                 let html = '';
                 snaps.forEach(doc => {
                     const order = doc.data();
-                    html += `<div style="border:1px solid #ddd; padding:10px; margin-bottom:10px;">
+                    html += `<div style="border:1px solid #ddd; padding:10px; margin-bottom:10px; border-radius:5px;">
                                 <strong>Status: ${order.status}</strong><br>
                                 Details: ${order.details}<br>
                                 <small>Date: ${order.createdAt ? new Date(order.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}</small>
