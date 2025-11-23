@@ -24,6 +24,27 @@
         .btn-submit { width: 100%; padding: 1rem; background: var(--brand); color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 1rem; }
         .btn-submit:hover { background: #15803d; }
         @media (max-width: 768px) { body { flex-direction: column; overflow: auto; } .left-panel { padding: 2rem; } .right-panel { padding: 2rem; } }
+        /* --- IMPROVED RESPONSIVE FOR EARN.HTML --- */
+@media (max-width: 768px) { 
+    body { 
+        flex-direction: column; 
+        overflow: auto; 
+        height: auto; /* Allow scrolling */
+    } 
+    .left-panel { 
+        padding: 2rem 1.5rem; 
+        min-height: auto;
+    } 
+    .right-panel { 
+        padding: 2rem 1rem; 
+    } 
+    
+    /* Fix Font Sizes */
+    h1 { font-size: 2.2rem; }
+    
+    /* Ensure Form fits */
+    .form-container { width: 100%; }
+}
     </style>
 </head>
 <body>
@@ -150,4 +171,5 @@
     }
 </script>
 </body>
+
 </html>
