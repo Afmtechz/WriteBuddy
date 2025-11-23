@@ -29,12 +29,27 @@
             display: flex; align-items: center; gap: 1.5rem; margin-bottom: 2rem;
         }
 
-        .avatar-large { width: 80px; height: 80px; background-color: #cbd5e1; border-radius: 50%; background-size: cover; }
-        .verified-badge { background-color: #dcfce7; color: #166534; font-size: 0.8rem; padding: 2px 8px; border-radius: 12px; margin-left: 8px; }
+        .avatar-large { width: 80px; height: 80px; background-color: #cbd5e1; border-radius: 50%; background-size: cover; flex-shrink: 0; }
+        .verified-badge { background-color: #dcfce7; color: #166534; font-size: 0.8rem; padding: 2px 8px; border-radius: 12px; margin-left: 8px; white-space: nowrap; }
 
-        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 1rem; }
-        .gallery-item { height: 200px; background: white; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: transform 0.2s; overflow: hidden; }
-        .gallery-item:hover { transform: scale(1.02); }
+        /* Gallery Grid Update */
+        .gallery-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); 
+            gap: 15px; 
+            margin-top: 1rem; 
+        }
+        .gallery-item { 
+            height: 200px; 
+            background: white; 
+            border: 1px solid var(--border); 
+            border-radius: 8px; 
+            cursor: pointer; 
+            transition: transform 0.2s; 
+            overflow: hidden; 
+            position: relative;
+        }
+        .gallery-item:hover { transform: scale(1.02); border-color: var(--primary); }
         
         .mock-img { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background-size: cover; background-position: center; }
 
@@ -48,38 +63,17 @@
 
         /* Lightbox */
         .lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; justify-content: center; align-items: center; flex-direction: column; }
-        .lightbox-content { background: white; padding: 1rem; border-radius: 8px; max-width: 90%; max-height: 90%; overflow: auto; }
-        .close-lightbox { color: white; font-size: 2rem; margin-bottom: 1rem; cursor: pointer; }
-        #lightboxImg { max-width: 100%; max-height: 80vh; }
-        /* --- RESPONSIVE UPDATE FOR PROFILE.HTML --- */
-@media (max-width: 768px) {
-    /* Stack Columns */
-    .container {
-        grid-template-columns: 1fr;
-        display: flex;
-        flex-direction: column-reverse; /* Put Pricing CARD on TOP or Bottom? usually bottom is better for info, top for CTA. Let's keep normal order but stacked. */
-        flex-direction: column;
-    }
+        .lightbox-content { background: transparent; padding: 0; border-radius: 0; max-width: 90%; max-height: 90%; display: flex; justify-content: center; align-items: center; }
+        .close-lightbox { color: white; font-size: 2rem; margin-bottom: 1rem; cursor: pointer; position: absolute; top: 20px; right: 30px; }
+        #lightboxImg { max-width: 100%; max-height: 80vh; border-radius: 4px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }
 
-    /* Stack Header Info */
-    .profile-header {
-        flex-direction: column;
-        text-align: center;
-    }
-    .verified-badge { display: inline-block; margin-top: 5px; }
-
-    /* Adjust Pricing Card */
-    .pricing-card {
-        position: relative; /* Remove sticky on mobile */
-        top: 0;
-        margin-bottom: 2rem;
-        border-top: none;
-        border-bottom: 5px solid var(--primary); /* Visual cue */
-    }
-    
-    /* Navigation */
-    nav { padding: 1rem; flex-direction: column; gap: 10px; }
-}
+        /* Responsive Fixes */
+        @media (max-width: 768px) {
+            .container { grid-template-columns: 1fr; display: flex; flex-direction: column; }
+            .profile-header { flex-direction: column; text-align: center; }
+            .pricing-card { position: relative; top: 0; margin-bottom: 2rem; border-top: none; border-bottom: 5px solid var(--primary); }
+            nav { padding: 1rem; flex-direction: column; gap: 10px; }
+        }
     </style>
 </head>
 <body>
@@ -146,25 +140,35 @@
                         // Avatar
                         document.getElementById('profileAvatar').style.backgroundImage = `url('${data.photoURL}')`;
                         
-                        // --- FIXING THE GALLERY VISIBILITY ISSUE ---
+                        // --- UPDATED GALLERY LOGIC ---
                         const gallery = document.getElementById('sampleGallery');
-                        gallery.innerHTML = ''; // Clear loading text/mock data
+                        gallery.innerHTML = ''; // Clear loading text
 
-                        if (data.sampleImage) {
-                            // If user has a sample image uploaded
-                            const div = document.createElement('div');
-                            div.className = 'gallery-item';
-                            div.onclick = function() { openLightbox(data.sampleImage); };
-                            
-                            const imgDiv = document.createElement('div');
-                            imgDiv.className = 'mock-img';
-                            imgDiv.style.backgroundImage = `url('${data.sampleImage}')`;
-                            
-                            div.appendChild(imgDiv);
-                            gallery.appendChild(div);
+                        // Determine which images to show (Array vs Single String)
+                        let imagesToShow = [];
+                        if (data.sampleImages && Array.isArray(data.sampleImages)) {
+                            imagesToShow = data.sampleImages;
+                        } else if (data.sampleImage) {
+                            imagesToShow = [data.sampleImage];
+                        }
+
+                        if (imagesToShow.length > 0) {
+                            imagesToShow.forEach(imgUrl => {
+                                const div = document.createElement('div');
+                                div.className = 'gallery-item';
+                                div.onclick = function() { openLightbox(imgUrl); };
+                                
+                                const imgDiv = document.createElement('div');
+                                imgDiv.className = 'mock-img';
+                                imgDiv.style.backgroundImage = `url('${imgUrl}')`;
+                                
+                                div.appendChild(imgDiv);
+                                gallery.appendChild(div);
+                            });
                         } else {
                             gallery.innerHTML = "<p>No samples uploaded yet.</p>";
                         }
+
                     } else {
                         document.querySelector('.container').innerHTML = "<h2>User not found.</h2>";
                     }
@@ -194,18 +198,24 @@
             return;
         }
 
-        db.collection('orders').add({
-            buyerId: user.uid,
-            writerId: writerId,
-            status: 'Pending',
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            details: "New handwriting request"
-        }).then(() => {
-            alert("Request Sent! Check your Dashboard.");
-            window.location.href = 'dashboard.html';
-        });
+        if(user.uid === writerId) {
+            alert("You cannot hire yourself!");
+            return;
+        }
+
+        if(confirm("Send a hire request to this writer?")) {
+            db.collection('orders').add({
+                buyerId: user.uid,
+                writerId: writerId,
+                status: 'Pending',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                details: "New handwriting request"
+            }).then(() => {
+                alert("Request Sent! Check your Dashboard.");
+                window.location.href = 'dashboard.html';
+            });
+        }
     }
 </script>
 </body>
 </html>
-
