@@ -131,8 +131,26 @@
         </div>
 
         <div id="orders" class="tab-content">
-            <div id="ordersList">Loading orders...</div>
+    
+    <div id="writerSection" class="hidden" style="margin-bottom: 40px;">
+        <h3 style="color: var(--primary); border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">
+            📥 Incoming Jobs (You need to write)
+        </h3>
+        <div id="incomingList">
+            <p style="color:#64748b">No new work requests yet.</p>
         </div>
+    </div>
+
+    <div id="buyerSection">
+        <h3 style="color: var(--secondary); border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">
+            📤 My Requests (You hired someone)
+        </h3>
+        <div id="outgoingList">
+            <p style="color:#64748b">You haven't placed any orders.</p>
+        </div>
+    </div>
+
+</div>
 
         <div id="profile" class="tab-content hidden">
             <h3 style="color: var(--secondary);">Update Your Public Profile</h3>
@@ -169,138 +187,168 @@
     </div>
 
     <script>
-        let currentUser = null;
+    let currentUser = null;
 
-        window.onload = () => {
-            setTimeout(() => {
-                auth.onAuthStateChanged(user => {
-                    if(user) {
-                        currentUser = user;
-                        // Set Header Greeting
-                        const name = user.displayName || "User";
-                        document.getElementById('headerGreeting').innerText = `Hi, ${name}`;
-                        
-                        loadUserData(user.uid);
-                    } else {
-                        window.location.href = 'login.html';
-                    }
-                });
-            }, 1000);
-        };
+    window.onload = () => {
+        setTimeout(() => {
+            auth.onAuthStateChanged(user => {
+                if(user) {
+                    currentUser = user;
+                    const name = user.displayName || "User";
+                    document.getElementById('headerGreeting').innerText = `Hi, ${name}`;
+                    loadDashboardData(user.uid);
+                } else {
+                    window.location.href = 'login.html';
+                }
+            });
+        }, 1000);
+    };
 
-        function showTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(div => div.classList.add('hidden'));
-            document.getElementById(tabId).classList.remove('hidden');
-            
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            if(tabId === 'orders') document.getElementById('tabOrders').classList.add('active');
-            if(tabId === 'profile') document.getElementById('profileTabBtn').classList.add('active');
-        }
+    function showTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(div => div.classList.add('hidden'));
+        document.getElementById(tabId).classList.remove('hidden');
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        if(tabId === 'orders') document.getElementById('tabOrders').classList.add('active');
+        if(tabId === 'profile') document.getElementById('profileTabBtn').classList.add('active');
+    }
 
-        function loadUserData(uid) {
-            db.collection('users').doc(uid).get().then(doc => {
-                if (!doc.exists) return;
+    // --- MAIN DASHBOARD LOGIC ---
+    function loadDashboardData(uid) {
+        // 1. Check User Profile to see if they are a writer
+        db.collection('users').doc(uid).get().then(doc => {
+            if (doc.exists) {
                 const data = doc.data();
                 
-                // If user is a writer, show profile tab
+                // If user is a writer, show the Profile Edit tab AND the Incoming Jobs section
                 if (data.role === 'writer') {
                     document.getElementById('profileTabBtn').style.display = 'inline-block';
-                    
-                    // Fill Form
-                    document.getElementById('editName').value = data.name || '';
-                    document.getElementById('editCollege').value = data.college || '';
-                    document.getElementById('editRate').value = data.rate || '10';
-                    document.getElementById('editBio').value = data.bio || '';
-                    
-                    if(data.sampleImage) {
-                        document.getElementById('currentSample').style.backgroundImage = `url('${data.sampleImage}')`;
-                        document.getElementById('currentSample').style.display = 'block';
-                    } else {
-                        document.getElementById('currentSample').style.display = 'none';
-                    }
+                    document.getElementById('writerSection').classList.remove('hidden');
+                    loadIncomingJobs(uid); // Load orders where I am the WRITER
+                    populateProfileForm(data); // Fill the edit form
                 }
-
-                loadOrders(uid, data.role || 'buyer');
-            });
-        }
-
-        function updateProfile() {
-            const btn = document.getElementById('saveBtn');
-            btn.innerText = "Uploading & Saving...";
-            btn.disabled = true;
-
-            const updateData = {
-                name: document.getElementById('editName').value,
-                college: document.getElementById('editCollege').value,
-                rate: document.getElementById('editRate').value,
-                bio: document.getElementById('editBio').value
-            };
-
-            const fileInput = document.getElementById('editSampleInput');
-
-            // 1. Check if image needs uploading
-            if (fileInput.files.length > 0) {
-                const file = fileInput.files[0];
-                const storageRef = storage.ref('samples/' + currentUser.uid + '-' + file.name);
-
-                storageRef.put(file).then((snapshot) => {
-                    return snapshot.ref.getDownloadURL();
-                }).then((downloadURL) => {
-                    updateData.sampleImage = downloadURL;
-                    return saveToFirestore(updateData);
-                }).catch(err => {
-                    alert("Image Upload Failed: " + err.message);
-                    resetBtn();
-                });
-            } else {
-                // 2. Just update text data
-                saveToFirestore(updateData);
             }
-        }
+            // Everyone gets to see orders they placed
+            loadOutgoingRequests(uid); // Load orders where I am the BUYER
+        });
+    }
 
-        function saveToFirestore(data) {
-            db.collection('users').doc(currentUser.uid).update(data).then(() => {
-                alert("✅ Profile Updated Successfully!");
-                resetBtn();
-                // Refresh local image view if updated
-                if(data.sampleImage) {
-                    document.getElementById('currentSample').style.backgroundImage = `url('${data.sampleImage}')`;
-                    document.getElementById('currentSample').style.display = 'block';
-                }
-            }).catch(err => {
-                alert("Error: " + err.message);
-                resetBtn();
-            });
-        }
-
-        function resetBtn() {
-            const btn = document.getElementById('saveBtn');
-            btn.innerText = "Save Changes";
-            btn.disabled = false;
-        }
-
-        function loadOrders(uid, role) {
-            let queryField = role === 'writer' ? 'writerId' : 'buyerId';
-            db.collection('orders').where(queryField, '==', uid).get().then(snaps => {
-                const list = document.getElementById('ordersList');
-                if(snaps.empty) { list.innerHTML = "<p style='color:#64748b;'>No active orders.</p>"; return; }
+    // --- 1. LOAD REQUESTS I MADE (AS BUYER) ---
+    function loadOutgoingRequests(uid) {
+        db.collection('orders').where('buyerId', '==', uid)
+          .orderBy('createdAt', 'desc').get().then(snaps => {
+            const list = document.getElementById('outgoingList');
+            if(snaps.empty) return; // Keep default text
+            
+            let html = '';
+            snaps.forEach(doc => {
+                const order = doc.data();
+                const date = order.createdAt ? new Date(order.createdAt.seconds * 1000).toLocaleDateString() : 'N/A';
+                const badgeClass = getBadgeClass(order.status);
                 
-                let html = '';
-                snaps.forEach(doc => {
-                    const order = doc.data();
-                    html += `<div style="border:1px solid #e2e8f0; padding:15px; margin-bottom:10px; border-radius:8px;">
-                                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                                    <strong style="color:var(--primary)">${order.status}</strong>
-                                    <small>${order.createdAt ? new Date(order.createdAt.seconds * 1000).toLocaleDateString() : ''}</small>
-                                </div>
-                                <div style="color:#334155">${order.details}</div>
-                             </div>`;
-                });
-                list.innerHTML = html;
+                // Only show Cancel button if status is Pending
+                const actionBtn = order.status === 'Pending' 
+                    ? `<button class="btn-action btn-cancel" onclick="updateStatus('${doc.id}', 'Cancelled')">Cancel Request</button>` 
+                    : '';
+
+                html += `
+                    <div class="order-card">
+                        <div class="order-info">
+                            <div style="margin-bottom:5px;">
+                                <span class="badge ${badgeClass}">${order.status}</span>
+                                <small style="color:#64748b; margin-left:10px;">${date}</small>
+                            </div>
+                            <div style="font-weight:600; font-size:1.1rem;">${order.details || "Handwriting Task"}</div>
+                            <small>Writer ID: ...${order.writerId.slice(-5)}</small>
+                        </div>
+                        <div class="order-actions">
+                            ${actionBtn}
+                        </div>
+                    </div>`;
             });
+            list.innerHTML = html;
+        });
+    }
+
+    // --- 2. LOAD JOBS I RECEIVED (AS WRITER) ---
+    function loadIncomingJobs(uid) {
+        db.collection('orders').where('writerId', '==', uid)
+          .orderBy('createdAt', 'desc').get().then(snaps => {
+            const list = document.getElementById('incomingList');
+            if(snaps.empty) return;
+            
+            let html = '';
+            snaps.forEach(doc => {
+                const order = doc.data();
+                const date = order.createdAt ? new Date(order.createdAt.seconds * 1000).toLocaleDateString() : 'N/A';
+                const badgeClass = getBadgeClass(order.status);
+
+                // Only show Accept/Reject if Pending
+                let actionBtns = '';
+                if(order.status === 'Pending') {
+                    actionBtns = `
+                        <button class="btn-action btn-accept" onclick="updateStatus('${doc.id}', 'Accepted')">Accept</button>
+                        <button class="btn-action btn-reject" onclick="updateStatus('${doc.id}', 'Rejected')">Reject</button>
+                    `;
+                } else if (order.status === 'Accepted') {
+                     actionBtns = `<button class="btn-action btn-accept" onclick="updateStatus('${doc.id}', 'Completed')">Mark Done</button>`;
+                }
+
+                html += `
+                    <div class="order-card" style="border-left: 4px solid var(--primary);">
+                        <div class="order-info">
+                            <div style="margin-bottom:5px;">
+                                <span class="badge ${badgeClass}">${order.status}</span>
+                                <small style="color:#64748b; margin-left:10px;">${date}</small>
+                            </div>
+                            <div style="font-weight:600;">${order.details || "New Order Request"}</div>
+                        </div>
+                        <div class="order-actions">
+                            ${actionBtns}
+                        </div>
+                    </div>`;
+            });
+            list.innerHTML = html;
+        });
+    }
+
+    // --- UTILS ---
+    function updateStatus(orderId, newStatus) {
+        if(!confirm(`Are you sure you want to set this order to ${newStatus}?`)) return;
+        
+        db.collection('orders').doc(orderId).update({
+            status: newStatus
+        }).then(() => {
+            alert("Status Updated!");
+            // Refresh logic
+            loadDashboardData(currentUser.uid); 
+        }).catch(err => alert("Error: " + err.message));
+    }
+
+    function getBadgeClass(status) {
+        switch(status) {
+            case 'Pending': return 'badge-pending';
+            case 'Accepted': return 'badge-accepted';
+            case 'Completed': return 'badge-accepted';
+            case 'Rejected': return 'badge-rejected';
+            case 'Cancelled': return 'badge-cancelled';
+            default: return 'badge-pending';
         }
-    </script>
+    }
+
+    function populateProfileForm(data) {
+        document.getElementById('editName').value = data.name || '';
+        document.getElementById('editCollege').value = data.college || '';
+        document.getElementById('editRate').value = data.rate || '10';
+        document.getElementById('editBio').value = data.bio || '';
+        if(data.sampleImage) {
+            document.getElementById('currentSample').style.backgroundImage = `url('${data.sampleImage}')`;
+            document.getElementById('currentSample').style.display = 'block';
+        }
+    }
+    
+</script>
 </body>
 </html>
+
 
 
