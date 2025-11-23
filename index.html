@@ -51,6 +51,7 @@
 
         .btn-login { background: none; color: var(--secondary); }
         .btn-signup { background: var(--primary); color: white; }
+        .btn-dashboard { background: var(--secondary); color: white; display: none; } /* Added Dashboard style */
         .btn-logout { background: #fee2e2; color: #dc2626; display: none; }
         .user-greeting { font-weight: bold; display: none; margin-right: 10px; }
 
@@ -138,6 +139,7 @@
         <a href="index.html" class="logo">✍️ Handwritten Hub</a>
         <div class="nav-buttons">
             <span id="userGreeting" class="user-greeting"></span>
+            <button id="btnDashboard" class="btn-dashboard" onclick="window.location.href='dashboard.html'">Dashboard</button>
             <button id="btnLogin" class="btn-login" onclick="window.location.href='login.html'">Log In</button>
             <button id="btnSignup" class="btn-signup" onclick="window.location.href='login.html'">Sign Up</button>
             <button id="btnLogout" class="btn-logout" onclick="logout()">Log Out</button>
@@ -171,6 +173,7 @@
             const loginBtn = document.getElementById('btnLogin');
             const signupBtn = document.getElementById('btnSignup');
             const logoutBtn = document.getElementById('btnLogout');
+            const dashboardBtn = document.getElementById('btnDashboard');
             const greeting = document.getElementById('userGreeting');
 
             if (user) {
@@ -182,6 +185,7 @@
                 greeting.style.display = 'block';
                 greeting.innerText = `Hi, ${userData.name}`;
                 
+                dashboardBtn.style.display = 'block'; // SHOW DASHBOARD BUTTON
                 logoutBtn.style.display = 'block';
             }
         }
@@ -197,11 +201,10 @@
         function loadFeaturedWriters() {
             const container = document.getElementById('featuredWritersList');
 
-            // Wait slightly for Firebase to init
             setTimeout(() => {
                 db.collection('users')
                   .where('role', '==', 'writer')
-                  .limit(3) // Only show top 3 on homepage
+                  .limit(3) 
                   .get()
                   .then((querySnapshot) => {
                       if (querySnapshot.empty) {
@@ -209,12 +212,11 @@
                           return;
                       }
 
-                      container.innerHTML = ""; // Clear loading text
+                      container.innerHTML = ""; 
 
                       querySnapshot.forEach((doc) => {
                           const writer = doc.data();
                           
-                          // Handle missing or partial data
                           const price = writer.rate ? `₹${writer.rate.replace(/\D/g, '')}/pg` : '₹10/pg';
                           const imgUrl = writer.sampleImage ? `url('${writer.sampleImage}')` : '';
                           const sampleText = writer.sampleImage ? '' : 'No Preview';
@@ -245,10 +247,9 @@
                       console.error("Error loading writers:", error);
                       container.innerHTML = "<p>Could not load writers. Please try again later.</p>";
                   });
-            }, 1000); // 1s delay to ensure global 'db' is ready
+            }, 1000); 
         }
 
-        // Run on load
         window.onload = function() {
             checkAuth();
             loadFeaturedWriters();
