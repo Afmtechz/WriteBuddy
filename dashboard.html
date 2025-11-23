@@ -61,6 +61,26 @@
             background-color: #f1f5f9;
         }
 
+        /* Delete Account Section */
+        .danger-zone {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .btn-delete-acc {
+            background: white;
+            border: 1px solid var(--danger-text);
+            color: var(--danger-text);
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        .btn-delete-acc:hover {
+            background: var(--danger-bg);
+        }
+
         /* Responsive */
         @media (max-width: 600px) {
             #profile div[style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
@@ -156,6 +176,12 @@
             <small style="color: #64748b; display:block; margin-top:5px;">⚠️ Max 2 images allowed. Max size 1MB each.</small>
             
             <button class="btn-save" id="saveBtn" onclick="updateProfile()">Save Changes</button>
+
+            <div class="danger-zone">
+                <h4 style="color: var(--danger-text); margin-top: 0; margin-bottom: 10px;">⚠️ Danger Zone</h4>
+                <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 15px;">Deleting your account is permanent. All your data and profile information will be wiped.</p>
+                <button class="btn-delete-acc" onclick="deleteAccount()">Delete Account</button>
+            </div>
         </div>
     </div>
 
@@ -191,13 +217,19 @@
         db.collection('users').doc(uid).get().then(doc => {
             if (doc.exists) {
                 const data = doc.data();
+                // Show Edit Profile Tab for EVERYONE (so they can delete account), 
+                // but only populate writer fields if they are a writer.
+                document.getElementById('profileTabBtn').style.display = 'inline-block';
+                
                 if (data.role === 'writer') {
-                    currentProfileData = data; // <--- SAVE DATA HERE
-                    
-                    document.getElementById('profileTabBtn').style.display = 'inline-block';
+                    currentProfileData = data; 
                     document.getElementById('writerSection').classList.remove('hidden');
                     loadIncomingJobs(uid); 
                     populateProfileForm(data); 
+                } else {
+                    // For buyers, we might just fill basic info or hide writer specific fields
+                    // For simplicity, we fill name/college if available
+                     document.getElementById('editName').value = data.name || '';
                 }
             }
             loadOutgoingRequests(uid); 
@@ -211,9 +243,8 @@
             document.getElementById('editBio').value = data.bio || '';
             
             const container = document.getElementById('samplesContainer');
-            container.innerHTML = ''; // Clear defaults
+            container.innerHTML = ''; 
 
-            // Logic to handle both Array (new) and String (old) formats
             let images = [];
             if (data.sampleImages && Array.isArray(data.sampleImages)) {
                 images = data.sampleImages;
@@ -233,13 +264,11 @@
             }
         }
 
-        // --- UPDATED PROFILE SAVE FUNCTION ---
         function updateProfile() {
             const btn = document.getElementById('saveBtn');
             const fileInput = document.getElementById('editSampleInput');
             const files = fileInput.files;
         
-            // 1. Get Existing Images safely
             let existingImages = [];
             if (currentProfileData.sampleImages && Array.isArray(currentProfileData.sampleImages)) {
                 existingImages = currentProfileData.sampleImages;
@@ -247,15 +276,11 @@
                 existingImages = [currentProfileData.sampleImage];
             }
         
-            // 2. Validation
             if (files.length > 0) {
-                // Check Total Limit (Existing count + New count)
                 if (existingImages.length + files.length > 2) {
                     alert(`⚠️ Limit Reached! You have ${existingImages.length} images. You can only add ${2 - existingImages.length} more.`);
                     return;
                 }
-                
-                // Check Size
                 for(let i=0; i<files.length; i++) {
                     if(files[i].size > 1048576) {
                         alert(`⚠️ File "${files[i].name}" is too large! Max size is 1MB.`);
@@ -274,7 +299,6 @@
                 bio: document.getElementById('editBio').value
             };
         
-            // 3. Upload & Merge Logic
             if (files.length > 0) {
                 const uploadPromises = Array.from(files).map(file => {
                     const ref = storage.ref('samples/' + currentUser.uid + '-' + Date.now() + '-' + file.name);
@@ -282,40 +306,65 @@
                 });
         
                 Promise.all(uploadPromises).then(newUrls => {
-                    // MERGE: Combine Existing images with New URLs
                     const finalImages = existingImages.concat(newUrls);
-                    
                     updateData.sampleImages = finalImages; 
-                    updateData.sampleImage = finalImages[0]; // Update main image
-                    
+                    updateData.sampleImage = finalImages[0]; 
                     return saveToFirestore(updateData);
                 }).catch(err => {
                     alert("Upload Failed: " + err.message);
                     resetBtn();
                 });
             } else {
-                // No new files, just update text
                 saveToFirestore(updateData);
             }
         }
-            
-                   function saveToFirestore(data) {
-                db.collection('users').doc(currentUser.uid).update(data).then(() => {
-                    alert("✅ Profile Updated Successfully!");
-                    // Force reload to ensure fresh data from DB and clear file inputs
-                    window.location.reload(); 
-                }).catch(err => {
-                    alert("Error: " + err.message);
-                    resetBtn();
-                });
-            }
+
+        function saveToFirestore(data) {
+            db.collection('users').doc(currentUser.uid).update(data).then(() => {
+                alert("✅ Profile Updated Successfully!");
+                // Force reload to ensure UI matches DB exactly
+                window.location.reload();
+            }).catch(err => {
+                alert("Error: " + err.message);
+                resetBtn();
+            });
+        }
+
         function resetBtn() {
             const btn = document.getElementById('saveBtn');
             btn.innerText = "Save Changes";
             btn.disabled = false;
         }
 
-        // --- ORDER FUNCTIONS (From previous step) ---
+        // --- NEW DELETE ACCOUNT FUNCTION ---
+        function deleteAccount() {
+            if(!confirm("⚠️ Are you sure you want to PERMANENTLY delete your account? This action cannot be undone.")) {
+                return;
+            }
+
+            const uid = currentUser.uid;
+            
+            // 1. Delete Firestore Data
+            db.collection('users').doc(uid).delete().then(() => {
+                // 2. Delete Authentication Account
+                currentUser.delete().then(() => {
+                    alert("Account Deleted. We are sorry to see you go.");
+                    window.location.href = 'index.html';
+                }).catch((authErr) => {
+                    // Security requirement: Sensitive operations sometimes require recent login
+                    console.error(authErr);
+                    if(authErr.code === 'auth/requires-recent-login') {
+                        alert("For security, please Log Out and Log In again before deleting your account.");
+                    } else {
+                        alert("Error deleting account: " + authErr.message);
+                    }
+                });
+            }).catch((dbErr) => {
+                alert("Error removing data: " + dbErr.message);
+            });
+        }
+
+        // --- ORDER FUNCTIONS ---
         function loadOutgoingRequests(uid) {
             db.collection('orders').where('buyerId', '==', uid).orderBy('createdAt', 'desc').get().then(snaps => {
                 const list = document.getElementById('outgoingList');
@@ -356,7 +405,3 @@
     </script>
 </body>
 </html>
-
-
-
-
