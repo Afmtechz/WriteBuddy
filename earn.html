@@ -87,7 +87,7 @@
 
                 <div class="input-group">
                     <label>Handwriting Sample</label>
-                    <input type="file" id="fileInput" accept="image/png, image/jpeg, image/jpg" style="display: none;" onchange="handleFileSelect(this)">
+                    <input type="file" id="fileInput" accept="image/png, image/jpeg, image/jpg" style="display: none;" onchange="handleFileSelect(this)" multiple>
                     
                     <div class="file-upload" id="dropZone" onclick="document.getElementById('fileInput').click()">
                         <span id="uploadText">📂 Click to upload photo of your writing</span>
@@ -180,4 +180,5 @@
 </body>
 
 </html>
+
 
