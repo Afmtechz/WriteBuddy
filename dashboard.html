@@ -415,70 +415,77 @@
             });
         }
 
-        // --- ORDER FUNCTIONS ---
         function loadOutgoingRequests(uid) {
             db.collection('orders').where('buyerId', '==', uid).orderBy('createdAt', 'desc').get().then(snaps => {
                 const list = document.getElementById('outgoingList');
-                if(snaps.empty) return;
+                if (snaps.empty) {
+                    list.innerHTML = '<p style="color:#64748b">You haven\'t placed any orders.</p>';
+                    return;
+                }
                 let html = '';
                 snaps.forEach(doc => {
                     const order = doc.data();
                     const date = order.createdAt ? new Date(order.createdAt.seconds * 1000).toLocaleDateString() : 'N/A';
-                    const actionBtn = order.status === 'Pending' ? `<button class="btn-action btn-cancel" onclick="updateStatus('${doc.id}', 'Cancelled')">Cancel</button>` : '';
-                    html += `<div class="order-card"><div class="order-info"><div style="margin-bottom:5px;"><span class="badge badge-${order.status.toLowerCase()}">${order.status}</span><small style="margin-left:10px;">${date}</small></div><strong>${order.details}</strong></div><div class="order-actions">${actionBtn}</div></div>`;
+                    
+                    // Cancel button only for Pending orders
+                    const actionBtn = order.status === 'Pending' ? 
+                        `<button class="btn-action btn-cancel" onclick="updateStatus('${doc.id}', 'Cancelled')">Cancel</button>` : '';
+                    
+                    // Chat Button
+                    const chatBtn = `<button class="btn-action" style="background:#3b82f6; color:white; margin-left:5px;" onclick="openChat('${doc.id}')">💬 Chat</button>`;
+                    
+                    html += `<div class="order-card">
+                                <div class="order-info">
+                                    <div style="margin-bottom:5px;">
+                                        <span class="badge badge-${order.status.toLowerCase()}">${order.status}</span>
+                                        <small style="margin-left:10px;">${date}</small>
+                                    </div>
+                                    <strong>${order.details}</strong>
+                                </div>
+                                <div class="order-actions">${actionBtn} ${chatBtn}</div>
+                             </div>`;
                 });
                 list.innerHTML = html;
             });
-            // ... existing code ...
-    const actionBtn = order.status === 'Pending' ? 
-        `<button class="btn-action btn-cancel" onclick="updateStatus('${doc.id}', 'Cancelled')">Cancel</button>` : '';
-    
-    // NEW: Add Chat Button
-    const chatBtn = `<button class="btn-action" style="background:#3b82f6; color:white; margin-left:5px;" onclick="openChat('${doc.id}')">💬 Chat</button>`;
-    
-    html += `<div class="order-card">
-                <div class="order-info">
-                    <div style="margin-bottom:5px;">
-                        <span class="badge badge-${order.status.toLowerCase()}">${order.status}</span>
-                        <small style="margin-left:10px;">${date}</small>
-                    </div>
-                    <strong>${order.details}</strong>
-                </div>
-                <div class="order-actions">${actionBtn} ${chatBtn}</div>
-             </div>`;
-    // ... existing code ...
-            }
-
+        }
         function loadIncomingJobs(uid) {
             db.collection('orders').where('writerId', '==', uid).orderBy('createdAt', 'desc').get().then(snaps => {
                 const list = document.getElementById('incomingList');
-                if(snaps.empty) return;
+                if (snaps.empty) {
+                    list.innerHTML = '<p style="color:#64748b">No new work requests yet.</p>';
+                    return;
+                }
                 let html = '';
                 snaps.forEach(doc => {
                     const order = doc.data();
                     const date = order.createdAt ? new Date(order.createdAt.seconds * 1000).toLocaleDateString() : 'N/A';
+                    
+                    // Define Buttons based on Status
                     let btns = '';
-                    if(order.status === 'Pending') btns = `<button class="btn-action btn-accept" onclick="updateStatus('${doc.id}', 'Accepted')">Accept</button><button class="btn-action btn-reject" onclick="updateStatus('${doc.id}', 'Rejected')">Reject</button>`;
-                    else if(order.status === 'Accepted') btns = `<button class="btn-action btn-accept" onclick="updateStatus('${doc.id}', 'Completed')">Mark Done</button>`;
-                    html += `<div class="order-card"><div class="order-info"><div style="margin-bottom:5px;"><span class="badge badge-${order.status.toLowerCase()}">${order.status}</span><small style="margin-left:10px;">${date}</small></div><strong>${order.details}</strong></div><div class="order-actions">${btns}</div></div>`;
+                    if (order.status === 'Pending') {
+                        btns = `<button class="btn-action btn-accept" onclick="updateStatus('${doc.id}', 'Accepted')">Accept</button>
+                                <button class="btn-action btn-reject" onclick="updateStatus('${doc.id}', 'Rejected')">Reject</button>`;
+                    } else if (order.status === 'Accepted') {
+                        btns = `<button class="btn-action btn-accept" onclick="updateStatus('${doc.id}', 'Completed')">Mark Done</button>`;
+                    }
+                    
+                    // Chat Button
+                    const chatBtn = `<button class="btn-action" style="background:#3b82f6; color:white; margin-left:5px;" onclick="openChat('${doc.id}')">💬 Chat</button>`;
+        
+                    html += `<div class="order-card">
+                                <div class="order-info">
+                                    <div style="margin-bottom:5px;">
+                                        <span class="badge badge-${order.status.toLowerCase()}">${order.status}</span>
+                                        <small style="margin-left:10px;">${date}</small>
+                                    </div>
+                                    <strong>${order.details}</strong>
+                                </div>
+                                <div class="order-actions">${btns} ${chatBtn}</div>
+                            </div>`;
                 });
                 list.innerHTML = html;
             });
-            // ... existing code ...
-            let btns = '';
-            if(order.status === 'Pending') btns = `...`; // (Keep your existing buttons)
-            else if(order.status === 'Accepted') btns = `...`;
-            
-            // NEW: Add Chat Button
-            const chatBtn = `<button class="btn-action" style="background:#3b82f6; color:white; margin-left:5px;" onclick="openChat('${doc.id}')">💬 Chat</button>`;
-            
-            html += `<div class="order-card">
-                        <div class="order-info">...</div>
-                        <div class="order-actions">${btns} ${chatBtn}</div>
-                     </div>`;
-            // ... existing code ...
-                    }
-
+        }
         function updateStatus(id, status) {
             if(confirm(`Set order to ${status}?`)) {
                 db.collection('orders').doc(id).update({status: status}).then(() => loadDashboardData(currentUser.uid));
@@ -557,5 +564,6 @@ window.onclick = function(event) {
     </script>
 </body>
 </html>
+
 
 
