@@ -5,73 +5,117 @@
     <title>Dashboard - WriteBuddy</title>
     <script src="firebase-config.js"></script> 
     <style>
-        body { font-family: sans-serif; padding: 2rem; background: #f8fafc; }
-        .container { max-width: 800px; margin: 0 auto; background: white; padding: 2rem; border-radius: 10px; }
-        .tab-btn { padding: 10px 20px; cursor: pointer; border: none; background: #e2e8f0; margin-right: 5px; border-radius: 5px; }
-        .tab-btn.active { background: #2563eb; color: white; }
+        :root {
+            --primary: #2563eb;
+            --secondary: #1e293b;
+            --paper: #f8fafc;
+            --danger-bg: #ffe4e6;
+            --danger-text: #dc2626;
+        }
+
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--paper); color: var(--secondary); }
+
+        /* Navigation Header */
+        nav {
+            background: white; padding: 1rem 2rem; border-bottom: 1px solid #e2e8f0;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .logo { font-size: 1.2rem; font-weight: bold; color: var(--primary); text-decoration: none; }
+        
+        .nav-right { display: flex; align-items: center; gap: 15px; }
+        .greeting { font-weight: 600; font-size: 0.95rem; }
+        
+        .btn-nav { padding: 8px 16px; border-radius: 6px; cursor: pointer; border: none; font-weight: 500; font-size: 0.9rem; text-decoration: none; }
+        .btn-home { background: #e2e8f0; color: var(--secondary); }
+        .btn-home:hover { background: #cbd5e1; }
+        .btn-logout { background: var(--danger-bg); color: var(--danger-text); }
+        .btn-logout:hover { background: #fecaca; }
+
+        /* Main Content */
+        .container { max-width: 800px; margin: 2rem auto; background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        
+        .tab-btn { padding: 10px 20px; cursor: pointer; border: none; background: #f1f5f9; margin-right: 5px; border-radius: 5px; color: #64748b; font-weight: 600; }
+        .tab-btn.active { background: var(--primary); color: white; }
         .hidden { display: none; }
         
         /* Form Styles */
-        label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; }
-        input, select, textarea { width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 5px; }
-        .btn-save { background: #16a34a; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin-top: 20px; }
-        .current-img { width: 100px; height: 100px; background-size: cover; border-radius: 5px; margin-top: 5px; border: 1px solid #ddd; }
+        label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; font-size: 0.9rem; }
+        input, select, textarea { width: 100%; padding: 10px; box-sizing: border-box; margin-bottom: 5px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: inherit; }
+        .btn-save { background: #16a34a; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; margin-top: 20px; font-weight: bold; width: 100%; }
+        .btn-save:hover { background: #15803d; }
+
+        .current-img { width: 120px; height: 120px; background-size: cover; border-radius: 8px; margin-top: 5px; border: 1px solid #ddd; background-position: center; }
     </style>
 </head>
 <body>
+
+    <nav>
+        <a href="index.html" class="logo">✍️ Handwritten Hub</a>
+        <div class="nav-right">
+            <span id="headerGreeting" class="greeting"></span>
+            <a href="index.html" class="btn-nav btn-home">Back Home</a>
+            <button class="btn-nav btn-logout" onclick="auth.signOut().then(()=>window.location.href='index.html')">Log Out</button>
+        </div>
+    </nav>
+
     <div class="container">
-        <h1>Welcome, <span id="userName">User</span></h1>
+        <h2 style="margin-top:0;">Dashboard Overview</h2>
         
-        <div style="margin-bottom: 20px;">
-            <button class="tab-btn active" onclick="showTab('orders')">My Orders</button>
-            <button class="tab-btn" id="profileTabBtn" onclick="showTab('profile')" style="display:none">Edit Profile</button>
-            <button class="tab-btn" onclick="auth.signOut().then(()=>window.location.href='index.html')">Log Out</button>
+        <div style="margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
+            <button class="tab-btn active" id="tabOrders" onclick="showTab('orders')">📦 My Orders</button>
+            <button class="tab-btn" id="profileTabBtn" onclick="showTab('profile')" style="display:none">👤 Edit Profile</button>
         </div>
 
         <div id="orders" class="tab-content">
-            <h3>Your Orders</h3>
-            <div id="ordersList">Loading...</div>
+            <div id="ordersList">Loading orders...</div>
         </div>
 
         <div id="profile" class="tab-content hidden">
-            <h3>Update Profile</h3>
+            <h3 style="color: var(--secondary);">Update Your Public Profile</h3>
             
-            <label>Full Name</label>
-            <input type="text" id="editName">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div>
+                    <label>Full Name</label>
+                    <input type="text" id="editName">
+                </div>
+                <div>
+                    <label>College / University</label>
+                    <input type="text" id="editCollege">
+                </div>
+            </div>
 
-            <label>College</label>
-            <input type="text" id="editCollege">
-
-            <label>Rate (per page)</label>
+            <label>Rate (₹ per page)</label>
             <select id="editRate">
                 <option value="10">₹10 (Standard)</option>
                 <option value="15">₹15 (Experienced)</option>
                 <option value="25">₹25 (Premium / Diagrams)</option>
             </select>
 
-            <label>Bio</label>
-            <textarea id="editBio" style="width:100%; height:80px;"></textarea>
+            <label>Bio / Skills</label>
+            <textarea id="editBio" rows="3"></textarea>
 
-            <label>Handwriting Sample</label>
+            <label>Current Handwriting Sample</label>
             <div id="currentSample" class="current-img"></div>
-            <input type="file" id="editSampleInput" accept="image/*" style="margin-top:10px;">
-            <small style="color:#666">Upload new to replace current.</small>
             
-            <br>
+            <label style="margin-top: 10px;">Upload New Sample (Optional)</label>
+            <input type="file" id="editSampleInput" accept="image/*">
+            
             <button class="btn-save" id="saveBtn" onclick="updateProfile()">Save Changes</button>
         </div>
     </div>
 
     <script>
         let currentUser = null;
-        let currentDocId = null;
 
         window.onload = () => {
             setTimeout(() => {
                 auth.onAuthStateChanged(user => {
                     if(user) {
                         currentUser = user;
-                        document.getElementById('userName').innerText = user.displayName || "User";
+                        // Set Header Greeting
+                        const name = user.displayName || "User";
+                        document.getElementById('headerGreeting').innerText = `Hi, ${name}`;
+                        
                         loadUserData(user.uid);
                     } else {
                         window.location.href = 'login.html';
@@ -83,22 +127,22 @@
         function showTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(div => div.classList.add('hidden'));
             document.getElementById(tabId).classList.remove('hidden');
+            
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            // Adding active class to the clicked button requires passing logic or using event, 
-            // kept simple here for brevity.
+            if(tabId === 'orders') document.getElementById('tabOrders').classList.add('active');
+            if(tabId === 'profile') document.getElementById('profileTabBtn').classList.add('active');
         }
 
         function loadUserData(uid) {
             db.collection('users').doc(uid).get().then(doc => {
                 if (!doc.exists) return;
-                currentDocId = uid;
-                
                 const data = doc.data();
                 
-                // If user is a writer, show profile tab and populate data
+                // If user is a writer, show profile tab
                 if (data.role === 'writer') {
                     document.getElementById('profileTabBtn').style.display = 'inline-block';
                     
+                    // Fill Form
                     document.getElementById('editName').value = data.name || '';
                     document.getElementById('editCollege').value = data.college || '';
                     document.getElementById('editRate').value = data.rate || '10';
@@ -106,6 +150,7 @@
                     
                     if(data.sampleImage) {
                         document.getElementById('currentSample').style.backgroundImage = `url('${data.sampleImage}')`;
+                        document.getElementById('currentSample').style.display = 'block';
                     } else {
                         document.getElementById('currentSample').style.display = 'none';
                     }
@@ -117,23 +162,19 @@
 
         function updateProfile() {
             const btn = document.getElementById('saveBtn');
-            btn.innerText = "Saving...";
+            btn.innerText = "Uploading & Saving...";
             btn.disabled = true;
 
-            const newName = document.getElementById('editName').value;
-            const newCollege = document.getElementById('editCollege').value;
-            const newRate = document.getElementById('editRate').value;
-            const newBio = document.getElementById('editBio').value;
-            const fileInput = document.getElementById('editSampleInput');
-
-            let updateData = {
-                name: newName,
-                college: newCollege,
-                rate: newRate,
-                bio: newBio
+            const updateData = {
+                name: document.getElementById('editName').value,
+                college: document.getElementById('editCollege').value,
+                rate: document.getElementById('editRate').value,
+                bio: document.getElementById('editBio').value
             };
 
-            // Check if a new image file is selected
+            const fileInput = document.getElementById('editSampleInput');
+
+            // 1. Check if image needs uploading
             if (fileInput.files.length > 0) {
                 const file = fileInput.files[0];
                 const storageRef = storage.ref('samples/' + currentUser.uid + '-' + file.name);
@@ -144,11 +185,11 @@
                     updateData.sampleImage = downloadURL;
                     return saveToFirestore(updateData);
                 }).catch(err => {
-                    alert("Image Upload Error: " + err.message);
-                    btn.innerText = "Save Changes";
-                    btn.disabled = false;
+                    alert("Image Upload Failed: " + err.message);
+                    resetBtn();
                 });
             } else {
+                // 2. Just update text data
                 saveToFirestore(updateData);
             }
         }
@@ -156,33 +197,39 @@
         function saveToFirestore(data) {
             db.collection('users').doc(currentUser.uid).update(data).then(() => {
                 alert("✅ Profile Updated Successfully!");
-                document.getElementById('saveBtn').innerText = "Save Changes";
-                document.getElementById('saveBtn').disabled = false;
-                
-                // Update Local UI if image changed
+                resetBtn();
+                // Refresh local image view if updated
                 if(data.sampleImage) {
                     document.getElementById('currentSample').style.backgroundImage = `url('${data.sampleImage}')`;
                     document.getElementById('currentSample').style.display = 'block';
                 }
             }).catch(err => {
-                alert("Error updating profile: " + err.message);
+                alert("Error: " + err.message);
+                resetBtn();
             });
+        }
+
+        function resetBtn() {
+            const btn = document.getElementById('saveBtn');
+            btn.innerText = "Save Changes";
+            btn.disabled = false;
         }
 
         function loadOrders(uid, role) {
             let queryField = role === 'writer' ? 'writerId' : 'buyerId';
-            
             db.collection('orders').where(queryField, '==', uid).get().then(snaps => {
                 const list = document.getElementById('ordersList');
-                if(snaps.empty) { list.innerHTML = "No active orders."; return; }
+                if(snaps.empty) { list.innerHTML = "<p style='color:#64748b;'>No active orders.</p>"; return; }
                 
                 let html = '';
                 snaps.forEach(doc => {
                     const order = doc.data();
-                    html += `<div style="border:1px solid #ddd; padding:10px; margin-bottom:10px; border-radius:5px;">
-                                <strong>Status: ${order.status}</strong><br>
-                                Details: ${order.details}<br>
-                                <small>Date: ${order.createdAt ? new Date(order.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}</small>
+                    html += `<div style="border:1px solid #e2e8f0; padding:15px; margin-bottom:10px; border-radius:8px;">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                                    <strong style="color:var(--primary)">${order.status}</strong>
+                                    <small>${order.createdAt ? new Date(order.createdAt.seconds * 1000).toLocaleDateString() : ''}</small>
+                                </div>
+                                <div style="color:#334155">${order.details}</div>
                              </div>`;
                 });
                 list.innerHTML = html;
